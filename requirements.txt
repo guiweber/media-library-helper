@@ -1,0 +1,2 @@
+python-ffmpeg >= 2.0.7
+packaging >= 23.2
