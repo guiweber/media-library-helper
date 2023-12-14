@@ -4,16 +4,25 @@ import time
 from datetime import datetime
 
 
-def print_progress(msg, *args):
-    """ Throttles printing the progress of a process """
-    if time.time() > print_progress.last_call + 1:
-        print(msg.format(*args), end="\r", flush=True)
+def print_progress(msg, *args, show_time=True, init=False, final=False):
+    """ Throttles printing and updates the progress of a process on a single line
+    Note: When running in an IDE, the terminal must be emulated in the output console to allow flushing of the output
+    :param msg: String message to format with the arguments
+    :param args: Positional arguments to insert into the message string
+    :param show_time: If true, elapsed time will be shown before the message
+    :param init: If true, resets elapsed time
+    :param final: If true, throttling is ignored and the message is ended with a new line character
+    """
+    end = "\n" if final else "\r"
+    msg = time_brackets(init=init) + msg if show_time else msg
+    if final or time.time() > print_progress.last_call + 1:
+        print(msg.format(*args), end=end, flush=True)
         print_progress.last_call = time.time()
 print_progress.last_call = 0
 
 
 def time_elapsed(init=False, text=True):
-    """ Returns the time elapsed since initialization, either in timedelta format or in a readable text format (default) """
+    """ Returns the time elapsed since initialization, either in timedelta or in readable text format (default) """
 
     if init or not hasattr(time_elapsed, 'start'):
         time_elapsed.start = datetime.now()
@@ -25,3 +34,7 @@ def time_elapsed(init=False, text=True):
         return str(elapsed).split('.')[0]
     else:
         return elapsed
+
+def time_brackets(init=False):
+    """ Wraps time_elapsed in brackets [] """
+    return "[{}] ".format(time_elapsed(init=init))
