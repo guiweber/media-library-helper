@@ -13,12 +13,16 @@ def print_progress(msg, *args, show_time=True, init=False, final=False):
     :param init: If true, resets elapsed time
     :param final: If true, throttling is ignored and the message is ended with a new line character
     """
-    end = "\n" if final else "\r"
-    msg = time_brackets(init=init) + msg if show_time else msg
     if final or time.time() > print_progress.last_call + 1:
-        print(msg.format(*args), end=end, flush=True)
+        end = "\n" if final else "\r"
+        msg = time_brackets(init=init) + msg if show_time else msg
+        msg = msg.format(*args)
+        if len(msg) > print_progress.pad_len:
+            print_progress.pad_len = len(msg)
+        print(msg.ljust(print_progress.pad_len), end=end, flush=True)
         print_progress.last_call = time.time()
 print_progress.last_call = 0
+print_progress.pad_len = 0
 
 
 def time_elapsed(init=False, text=True):

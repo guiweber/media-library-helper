@@ -6,6 +6,13 @@ In addition to the modules in _requirements.txt_, these should be installed and 
 - ffmpeg
 - flac
 
+Some scripts use spacy for natural language processing and models need to be downloaded separately for each language
+https://spacy.io/models
+```
+python -m spacy download en-core-web-trf
+```
+Note that transformer (trf) models 
+
 ## Structure
 The scripts are sorter into folder depending on the type of files they manipulate
 - audio
