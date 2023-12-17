@@ -16,7 +16,7 @@ if __name__ == "__main__" and __package__ is None:
     sys.path.insert(1, parent_dir)
     __package__ = "media-library-helper"
 
-from shared.utils import print_progress, time_elapsed
+from shared.utils import print_progress
 
 
 def reencode_flac(lib_path: str, force: bool = False, n_procs: int = 4, verbose: bool = False) -> int:
@@ -69,11 +69,11 @@ def reencode_flac(lib_path: str, force: bool = False, n_procs: int = 4, verbose:
     flac_command = shlex.split('flac --best --verify --force --decode-through-errors')
     errors = []
     current_file = 0
-    msg = "[{}] Encoding file {}/{}"
+    msg = "Encoding file {}/{}"
     output = None if verbose else subprocess.DEVNULL
     for file in flac_files:
         current_file += 1
-        print_progress(msg, time_elapsed(), current_file, len(flac_files))
+        print_progress(msg, current_file, len(flac_files))
         processes.add(subprocess.Popen(flac_command + [file], stdout=output, stderr=output))
         while len(processes) >= n_procs:
             _wait_for_processes(processes, errors)
@@ -82,7 +82,7 @@ def reencode_flac(lib_path: str, force: bool = False, n_procs: int = 4, verbose:
     while len(processes) > 0:
         _wait_for_processes(processes, errors)
 
-    print(msg.format(time_elapsed(), current_file, len(flac_files)))
+    print_progress(msg, current_file, len(flac_files), final=True)
     print("Encoding completed!")
 
     # Check how much space was saved and show errors if any
@@ -140,7 +140,7 @@ def is_flac(file: str) -> bool:
 
 
 def _needs_reencoding(file: str, flac_version: version.Version) -> bool:
-    """ Check if the file was encoded with an older version of FLAC"""
+    """ Check if the file was encoded with an older version of FLAC """
     try:
         vendor_string = get_flac_vendor_string(file).split()
     except Exception as e:
