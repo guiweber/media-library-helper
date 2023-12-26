@@ -15,7 +15,7 @@ if __name__ == "__main__" and __package__ is None:
 
 from shared.utils import print_progress
 
-supported_video_formats = ["mkv", "mk3d", "mka", "mks",
+supported_video_formats = ["mkv", "mk3d", "mka", "mks", "webm",
                            "mp4", "m4a", "m4p", "m4b", "m4r", "m4v",
                            "mov", "movie", "qt"]
 
@@ -67,7 +67,7 @@ def extract_subs(lib_path: str, languages: list, sub_format='srt', force: bool =
     errors = []
     for file in video_files:
         base_file = os.path.splitext(file[0])[0]
-        filen_name = os.path.basename(file[0])
+        file_name = os.path.basename(file[0])
         ffmpeg = FFmpeg().option("y").input(file[0])
         msg = "Extracting subs from: {} "
         for sub in file[1]:
@@ -78,17 +78,17 @@ def extract_subs(lib_path: str, languages: list, sub_format='srt', force: bool =
         def on_progress():
             on_progress.count += 1
             if not on_progress.count % 5:
-                print_progress(msg, filen_name)
+                print_progress(msg, file_name)
         on_progress.count = 0
 
         @ffmpeg.on("completed")
         def on_completed():
-            print_progress(msg, filen_name, final=True)
+            print_progress(msg, file_name, final=True)
 
         try:
             ffmpeg.execute()
         except Exception as e:
-            errors += [filen_name + " " + str(e)]
+            errors += [file_name + " " + str(e)]
             print_progress(errors[-1], final=True)
 
     print_progress("Subtitle extraction completed", final=True)
