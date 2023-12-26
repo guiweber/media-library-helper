@@ -24,6 +24,7 @@ dirty_strings = [
     "clearway law",
     "downloaded from",
     "encoded by",
+    "encoded vid",
     "english - us",
     "movies site",
     " sdh",
@@ -243,7 +244,7 @@ def _is_dirty(content):
     """
 
     # Sometimes dirt may be hidden - split by some tags, so remove them
-    content = re.sub(r'<.*?>', '', content)
+    content = re.sub(r'<.*?>', '', content).lower()
 
     # Check if the content is dirty
     for dirt in dirty_strings:
