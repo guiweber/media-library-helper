@@ -14,6 +14,7 @@ if __name__ == "__main__" and __package__ is None:
     __package__ = "media-library-helper"
 
 from shared.utils import print_progress
+from shared.vid_utils import get_sub_language_from_file_name
 
 
 supported_sub_formats = ["srt"]
@@ -43,7 +44,9 @@ dirty_strings = [
 
 
 def clean_subs(lib_path: str, spacy_models, spacy_models_languages, force_cap=False, force_tags=False):
-    """ Clean common unwanted strings from subtitles recursively from the specified directory
+    """ Clean common unwanted strings from subtitles recursively from the specified directory.
+        For full functionality, subtitles files need to be named following the jellyfin external file tagging standard
+        (https://jellyfin.org/docs/general/server/media/external-files/), with a 2 or 3 letter language code
         :param lib_path: Base directory from which the process will be started
         :param spacy_models: List of spacy models to use for language processing
         :param spacy_models_languages: List of language codes for the language models
@@ -78,7 +81,7 @@ def clean_subs(lib_path: str, spacy_models, spacy_models_languages, force_cap=Fa
                     res = _clean(filepath, force_cap, force_tags, msg, [sub_count, change_count])
                     if res["modified"]:
                         change_count += 1
-                    if res["model_missing"]:
+                    if res["language_missing"]:
                         errors += ["Could not capitalize file due to missing language model or undetermined file language: "
                                    + os.path.basename(file)]
                     if res['file_error']:
@@ -137,7 +140,7 @@ def _clean(file, force_cap, force_tags, progress_msg, msg_args):
     result = dict()
     result['capitalized'] = False
     result['removed_tags'] = False
-    result['model_missing'] = False
+    result['language_missing'] = False
     result['file_error'] = False
 
     encodings = ['utf-8-sig', 'cp1252', 'utf-16-sig']
@@ -194,16 +197,16 @@ def _clean(file, force_cap, force_tags, progress_msg, msg_args):
     if all_caps > 10 or force_cap:
         long_process = " - Current file needs deep cleaning {}/{}"
         new_sentence = True
-        model_lang = _load_spacy_model(file)
-        if model_lang:
+        lang = get_sub_language_from_file_name(file)
+        if lang and _load_spacy_model(lang):
             total = len(subs)
             for i, sub in enumerate(subs):
                 print_progress(progress_msg + long_process.ljust(45), *msg_args, i, total)
-                subs[i], new_sentence = capitalize(sub, new_sentence, model_lang)
+                subs[i], new_sentence = capitalize(sub, new_sentence, lang)
             result['modified'] = True
             result['capitalized'] = True
         else:
-            result['model_missing'] = True
+            result['language_missing'] = True
     if unwanted_tags or force_tags:
         subs = [_remove_unwanted_tags(sub) for sub in subs]
         result['modified'] = True
@@ -253,21 +256,18 @@ def _is_dirty(content):
     return False
 
 
-def _load_spacy_model(filename):
-    """ Determines the language of a sub file based on its name and check if a model exists for that language """
-    parts = os.path.splitext(filename)[0].split(".")
-    for p in parts:
-        try:
-            if len(p) <= 3:
-                lang = langcodes.standardize_tag(p)
-                if lang in _spacy_models:
-                    # Load the model if it's not loaded
-                    if type(_spacy_models[lang]) is str:
-                        _spacy_models[lang] = spacy.load(_spacy_models[lang])
-                    return lang
-        except langcodes.tag_parser.LanguageTagError:
-            pass
-    return ''
+def _load_spacy_model(lang):
+    """Try loading a Spacy model for the specified language.
+    :param lang: language code
+    :return: Returns True if a model is present and loaded or False otherwise
+    """
+    if lang in _spacy_models:
+        # Load the model on first use
+        if type(_spacy_models[lang]) is str:
+            _spacy_models[lang] = spacy.load(_spacy_models[lang])
+        return True
+    else:
+        return False
 
 
 def _remove_unwanted_tags(sub):
