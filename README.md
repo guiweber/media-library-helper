@@ -31,6 +31,7 @@ The scripts are sorted into folder depending on the type of files they act on
 - __video__
   - ```clean_subs```: Removes common advertisement strings as well as formatting tags from subtitle files. Also attempts to detect ALL-CAPS subtitles and to apply grammatically correct capitalization.
   - ```extract_subs```: Extracts text based subtitles from video files and saves them as .srt.
+  - ```match_subs```: Renames and relocate subtitles to match their associated video file and comply with tagging standards. Also finds dangling subtitle files. 
 
 
 - __shared__: functions meant to be used by other scripts and not by the end user

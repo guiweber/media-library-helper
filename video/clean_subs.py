@@ -14,7 +14,7 @@ if __name__ == "__main__" and __package__ is None:
     __package__ = "media-library-helper"
 
 from shared.utils import print_progress
-from shared.vid_utils import get_sub_language_from_file_name
+from shared.vid_utils import get_sub_tags_from_file_name
 
 
 supported_sub_formats = ["srt"]
@@ -197,12 +197,12 @@ def _clean(file, force_cap, force_tags, progress_msg, msg_args):
     if all_caps > 10 or force_cap:
         long_process = " - Current file needs deep cleaning {}/{}"
         new_sentence = True
-        lang = get_sub_language_from_file_name(file)
-        if lang and _load_spacy_model(lang):
+        tags = get_sub_tags_from_file_name(file)
+        if tags and _load_spacy_model(tags[0]):
             total = len(subs)
             for i, sub in enumerate(subs):
                 print_progress(progress_msg + long_process.ljust(45), *msg_args, i, total)
-                subs[i], new_sentence = capitalize(sub, new_sentence, lang)
+                subs[i], new_sentence = capitalize(sub, new_sentence, tags[0])
             result['modified'] = True
             result['capitalized'] = True
         else:
