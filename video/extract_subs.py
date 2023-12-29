@@ -145,7 +145,8 @@ def _get_extractable_subs(file: str, languages: list, sub_format: str, force: bo
             lang_code = "und"  # Standard code for undefined language
             if 'language' in stream['tags']:
                 try:
-                    lang_code = langcodes.standardize_tag(stream['tags']['language'])
+                    if langcodes.Language.get(stream['tags']['language']).is_valid():
+                        lang_code = langcodes.standardize_tag(stream['tags']['language'])
                 except langcodes.tag_parser.LanguageTagError:
                     pass
 
