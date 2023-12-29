@@ -17,15 +17,16 @@ from shared.vid_utils import (get_sub_tags_from_file_name, get_supported_video_e
 from fs.find_empty_dirs import find_empty_dirs
 
 
-def match_subs(lib_path: str, supported_languages=[], default_language='', apply_changes=False, remove_empty=True):
+def match_subs(lib_path: str, supported_languages=[], default_language='', apply_changes=False, remove_empty=False,
+               remove_unmatched=False, remove_missing_language=False):
     """ Matches subtitle files to video files in the same or parent folders. If necessary, moves them to the video
         file folder, renames and tags them according to the jellyfin external file tagging standard.
         (https://jellyfin.org/docs/general/server/media/external-files/)
 
-        Files where the language cannot be determined will be displayed as "unmatched" unless a default language is provided.
+        If a default language is provided, files with no detected language will be tagged as of the default language.
 
         If no subtitle name tags are already present, basic rules are used to determine SDH, Forced and Foreign subs,
-        but the results should be reviewed as there is a high chance of misslabeling.
+        but the results should be reviewed as there is a high chance of mislabeling.
 
     :param lib_path: Base directory from which the process will be started
     :param supported_languages: List of BCP-47 languages codes, specifying the languages to process.
@@ -33,7 +34,10 @@ def match_subs(lib_path: str, supported_languages=[], default_language='', apply
     :param default_language: If a BCP-47 language code is specified, it will be used when the language of a subtitle
                              file cannot be determined
     :param apply_changes: If True, files will be moved/renamed. If False, changes are only printed to the console
-    :param remove_empty: If True and apply_changes is also true, empty directories will be removed
+    :param remove_empty: If True and apply_changes is also True, empty directories will be removed
+    :param remove_unmatched: If True and apply_changes is also True, unmatched subtitles will be removed
+    :param remove_missing_language: If True and apply_changes is also True, subtitles with missing or unmatched language
+                                    tags will be removed
     :return: 0 if the process ran successfully
     """
     # Check the input variables
@@ -59,8 +63,8 @@ def match_subs(lib_path: str, supported_languages=[], default_language='', apply
             print('Language code "{}" was not recognised. Use BCP 47 compliant codes.'.format(default_language))
             return 1
 
-    msg = ("Scanned {} subtitles files of which {} need to be moved/renamed, and {} ambiguous files. "
-           "A total of {} files could not be matched and were not modified.")
+    msg = ("Scanned {} subtitles files. {} to be moved/renamed, {} unmatched, "
+           "{} missing/unmatched language and {} errors. ")
     sub_count = 0
     modified = []
     unmatched = []
@@ -68,7 +72,7 @@ def match_subs(lib_path: str, supported_languages=[], default_language='', apply
     missing_lang = []
     ambiguous = []
     for sub_root, dirs, files in os.walk(lib_path):
-        print_progress(msg, sub_count, len(modified), len(ambiguous), len(unmatched))
+        print_progress(msg, sub_count, len(modified)+ len(ambiguous), len(unmatched), len(missing_lang), len(errors))
         for file in files:
             file_path = os.path.join(sub_root, file)
             file_base, file_ext = os.path.splitext(file)
@@ -81,52 +85,55 @@ def match_subs(lib_path: str, supported_languages=[], default_language='', apply
                 match = match_vid(sub_root, vid_root, file_base)
 
                 if not match:
-                    unmatched += ["Unmatched : " + file_path]
+                    unmatched += [file_path]
                 else:
                     # If a match exists, find the file language and other name tags
                     tags, ambiguous_sub = get_sub_tags(sub_root, file_base, file, match)
-                    if not tags:
-                        missing_lang += ["Missing language tag: " + os.path.join(sub_root, file)]
-                    elif supported_languages and tags[0] not in supported_languages:
-                        unmatched += ["Unmatched languages ({}): ".format(tags[0]) + file_path]
+                    if not tags or (supported_languages and tags[0] not in supported_languages):
+                        missing_lang += [file_path]
                     else:
                         # Use the match and tags to determine the target location of the file
                         move_to = os.path.join(vid_root, ".".join([match] + tags + [file_ext]))
                         if move_to != file_path:
-                            if os.path.exists(move_to):
-                                errors += ["Error: {} ==> New destination already exists: {}".format(file_path, move_to)]
+                            if ambiguous_sub:
+                                ambiguous += [(file_path, move_to)]
                             else:
-                                if ambiguous_sub:
-                                    ambiguous += [(file_path, move_to)]
-                                else:
-                                    modified += [(file_path, move_to)]
+                                modified += [(file_path, move_to)]
 
-    print_progress(msg, sub_count, len(modified), len(ambiguous), len(unmatched), final=True)
+    # Apply changes and prints out the results
+    print_progress(msg, sub_count, len(modified) + len(ambiguous), len(unmatched), len(missing_lang), len(errors), final=True)
 
-    [print("Modified: " + x[0] + "  ----->>>  " + x[1]) for x in modified]
-    [print("Modified (ambiguous) : " + x[0] + "  ----->>>  " + x[1]) for x in ambiguous]
+    [print("Planned change : " + x[0] + "  ----->>>  " + x[1]) for x in modified]
+    [print("Planned change (ambiguous) : " + x[0] + "  ----->>>  " + x[1]) for x in ambiguous]
     if apply_changes:
-        for x in modified:
-            try:
-                os.replace(x[0], x[1])
-            except Exception as e:
-                errors += [x[0] + " --> " + str(e)]
+        print("\nApplying changes...")
+        move_files(modified, errors)
+        move_files(ambiguous, errors)
 
-        for x in ambiguous:
-            try:
-                os.replace(x[0], x[1])
-            except Exception as e:
-                errors += [x[0] + " --> " + str(e)]
-
-    for i in [unmatched, missing_lang, errors]:
+    if unmatched:
         print()
-        [print(x) for x in i]
+        [print("Unmatched: " + x) for x in unmatched]
+        if apply_changes and remove_unmatched:
+            remove_files(unmatched)
+            print("Unmatched files have been removed")
+
+    if missing_lang:
+        print()
+        [print("Missing or unmatched language tag: " + x) for x in missing_lang]
+        if apply_changes and remove_missing_language:
+            remove_files(missing_lang)
+            print("Files with missing or unmatched language tags have been removed")
 
     if modified or unmatched or ambiguous or errors or missing_lang:
-        print_progress(msg, sub_count, len(modified), len(ambiguous), len(unmatched), final=True)
+        print()
+        print_progress(msg, sub_count, len(modified) + len(ambiguous), len(unmatched), len(missing_lang), len(errors), final=True)
 
     if apply_changes and remove_empty:
+        print()
         find_empty_dirs(lib_path, ignore_hidden=False, ignore_size=0, remove='yes')
+
+    print()
+    [print(x) for x in errors]
 
     return 0
 
@@ -284,6 +291,27 @@ def match_vid(sub_root, vid_root, file_base):
                                     match = res.group()
 
     return match
+
+
+def move_files(file_list, error_list):
+    """ Attempts to replace the files in the file_list where each item is a tuple (source, dest) """
+    for source, dest in file_list:
+        try:
+            if os.path.exists(dest):
+                error_list += ["Error: {} ==> New destination already exists: {}".format(source, dest)]
+            else:
+                os.replace(source, dest)
+        except Exception as e:
+            error_list += [source + " --> " + str(e)]
+
+
+def remove_files(file_list, error_list):
+    """ Attempts to remove the files in the list """
+    for file in file_list:
+        try:
+            os.replace(file)
+        except Exception as e:
+            error_list += [file + " --> " + str(e)]
 
 
 if __name__ == '__main__':
