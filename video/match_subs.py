@@ -140,8 +140,8 @@ def match_subs(lib_path: str, supported_languages=[], default_language='', apply
 
 def contains_vids(path):
     """ Scans a directory for video files and returns True if any is found """
-    for f in os.listdir(path):
-        if is_vid(path, f):
+    for f in os.scandir(path):
+        if is_vid(f):
             return True
     return False
 
@@ -238,15 +238,20 @@ def get_sub_tags(sub_root, file_base, file, match):
 
 def get_vids(path):
     """ Get a lit of supported video files without file extensions"""
-    return [os.path.splitext(f)[0] for f in os.listdir(path) if is_vid(path, f)]
+    return [os.path.splitext(f.name)[0] for f in os.scandir(path) if is_vid(f)]
 
 
-def is_vid(path, file):
-    """ Returns true if the file is a full supported video """
-    base, ext = os.path.splitext(file)
-    return (os.path.isfile(os.path.join(path, file))
-            and ext[1:].lower() in get_supported_video_extensions()
-            and not any(base.endswith(x) for x in get_vids_extra_tags()))
+def is_vid(entry):
+    """ Returns true if the os.DirEntry object is a file and is a supported video type
+    :param entry: An os.DirEntry, e.g. returned by os.scandir()
+    :return: True if the file is a supported video, False if not
+    """
+    if entry.is_file():
+        base, ext = os.path.splitext(entry.name)
+        return (ext[1:].lower() in get_supported_video_extensions()
+                and not any(base.endswith(x) for x in get_vids_extra_tags()))
+    else:
+        return False
 
 
 def list_item_in_str(str_list, string):
