@@ -114,14 +114,14 @@ def match_subs(lib_path: str, supported_languages=[], default_language='', apply
         print()
         [print("Unmatched: " + x) for x in unmatched]
         if apply_changes and remove_unmatched:
-            remove_files(unmatched)
+            remove_files(unmatched, errors)
             print("Unmatched files have been removed")
 
     if missing_lang:
         print()
         [print("Missing or unmatched language tag: " + x) for x in missing_lang]
         if apply_changes and remove_missing_language:
-            remove_files(missing_lang)
+            remove_files(missing_lang, errors)
             print("Files with missing or unmatched language tags have been removed")
 
     if modified or unmatched or ambiguous or errors or missing_lang:
@@ -307,16 +307,16 @@ def move_files(file_list, error_list):
             else:
                 os.replace(source, dest)
         except Exception as e:
-            error_list += [source + " --> " + str(e)]
+            error_list += [str(e)]
 
 
 def remove_files(file_list, error_list):
     """ Attempts to remove the files in the list """
     for file in file_list:
         try:
-            os.replace(file)
+            os.remove(file)
         except Exception as e:
-            error_list += [file + " --> " + str(e)]
+            error_list += [str(e)]
 
 
 if __name__ == '__main__':
