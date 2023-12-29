@@ -19,8 +19,8 @@ from fs.find_empty_dirs import find_empty_dirs
 
 def match_subs(lib_path: str, supported_languages=[], default_language='', apply_changes=False, remove_empty=False,
                remove_unmatched=False, remove_missing_language=False):
-    """ Matches subtitle files to video files in the same or parent folders. If necessary, moves them to the video
-        file folder, renames and tags them according to the jellyfin external file tagging standard.
+    """ Recursively matches subtitle files to video files in the same or parent folders. If needed, moves them to
+        the video file folder, renames and tags them according to the jellyfin external file tagging standard.
         (https://jellyfin.org/docs/general/server/media/external-files/)
 
         If a default language is provided, files with no detected language will be tagged as of the default language.
@@ -35,7 +35,7 @@ def match_subs(lib_path: str, supported_languages=[], default_language='', apply
                              file cannot be determined
     :param apply_changes: If True, files will be moved/renamed. If False, changes are only printed to the console
     :param remove_empty: If True and apply_changes is also True, empty directories will be removed
-    :param remove_unmatched: If True and apply_changes is also True, unmatched subtitles will be removed
+    :param remove_unmatched: If True and apply_changes is also True, removes subtitle files not matched to a video file
     :param remove_missing_language: If True and apply_changes is also True, subtitles with missing or unmatched language
                                     tags will be removed
     :return: 0 if the process ran successfully
@@ -320,7 +320,13 @@ def remove_files(file_list, error_list):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Reencodes flac files recursively from the specified directory')
+    parser = argparse.ArgumentParser(description='Matches subtitle files to video files and moves/renames them appropriately')
     parser.add_argument('lib_path', type=str, help='Base directory')
+    parser.add_argument('-l', '--languages', type=str, nargs='+', default=[], help='Language codes of subtitle files to process')
+    parser.add_argument('-dl', '--default-language', type=str, default='', help='Default language tag to apply to files without language tags')
+    parser.add_argument('-a', '--apply', action='store_true', help='Apply changes (move and rename files if necessary)')
+    parser.add_argument('-re', '--remove-empty', action='store_true', help='Remove empty directories')
+    parser.add_argument('-ru', '--remove-unmatched', action='store_true', help='Remove subtitle files not matched to a video file')
+    parser.add_argument('-rm', '--remove-missing', action='store_true', help='Remove subtitle files with missing or unmatched language tags')
     args = parser.parse_args()
     sys.exit(match_subs(**vars(args)))
