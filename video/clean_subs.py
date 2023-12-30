@@ -15,35 +15,13 @@ if __name__ == "__main__" and __package__ is None:
 
 from shared.utils import print_progress
 from shared.vid_utils import get_sub_tags_from_file_name
-
+from video.clean_subs_string_data import dirty_strings
 
 supported_sub_formats = ["srt"]
 _spacy_models = dict()
 
-# If any of these strings is detected in a subtitle sting, the sub block will be removed
-dirty_strings = [
-    "clearway law",
-    "downloaded from",
-    "encoded by",
-    "encoded vid",
-    "english - us",
-    "movies site",
-    " sdh",
-    "subtitle",
-    "upped by",
-    "uploaded by",
-    "www.",
-    ".com",
-    ".org",
-    ".net",
-    "@",
-    "-=",
-    "--",
-    "**"
-]
 
-
-def clean_subs(lib_path: str, spacy_models, spacy_models_languages, force_cap=False, force_tags=False):
+def clean_subs(lib_path: str, spacy_models, spacy_models_languages, force_cap=False, force_tags=False, ignore_parse_errors=False):
     """ Clean common unwanted strings from subtitles recursively from the specified directory.
         For full functionality, subtitles files need to be named following the jellyfin external file tagging standard
         (https://jellyfin.org/docs/general/server/media/external-files/), with a 2 or 3 letter language code
@@ -52,6 +30,9 @@ def clean_subs(lib_path: str, spacy_models, spacy_models_languages, force_cap=Fa
         :param spacy_models_languages: List of language codes for the language models
         :param force_cap: If True, forces recapitalization of the text for all subs (very slow)
         :param force_tags: If True, forces tag removal for all subs (slow)
+        :param ignore_parse_errors: If True, srt parse errors will be ignored.
+                                    Note that this can delete data from your file if,
+                                    for example, the wrong file encoding was used.
         :return: 0 if the process ran successfully
         """
 
@@ -77,22 +58,24 @@ def clean_subs(lib_path: str, spacy_models, spacy_models_languages, force_cap=Fa
             if file_ext in supported_sub_formats:
                 sub_count += 1
                 filepath = os.path.join(root, file)
-                try:
-                    res = _clean(filepath, force_cap, force_tags, msg, [sub_count, change_count])
-                    if res["modified"]:
-                        change_count += 1
-                    if res["language_missing"]:
-                        errors += ["Could not capitalize file due to missing language model or undetermined file language: "
-                                   + os.path.basename(file)]
-                    if res['file_error']:
-                        errors += ["Could not find encoding needed to open file :" + os.path.basename(file)]
-                except Exception as e:
-                    errors += [os.path.basename(file) + " --> " + str(e)]
+                res = _clean(filepath, force_cap, force_tags, msg, [sub_count, change_count], ignore_parse_errors)
+                if res["modified"]:
+                    change_count += 1
+                if res["language_missing"]:
+                    errors += ["Could not capitalize file due to missing language model or undetermined file language: "
+                               + filepath]
+                if res['file_error']:
+                    errors += ["Could not find encoding needed to open file :" + filepath]
+                if res['file_empty']:
+                    errors += ["File seems empty :" + filepath]
+                if res['parse_error']:
+                    errors += ["Parse error in file while using encoding {}. "
+                               "Try converting file to UTF-8 before ignoring parse errors. :".format(res['parse_error']) + filepath]
 
     print_progress(msg, sub_count, change_count, final=True)
     print("All subtitles cleaned!")
     print()
-    print("{} errors occured:".format(len(errors)))
+    print("{} errors occurred:".format(len(errors)))
     [print(e) for e in errors]
 
     return 0
@@ -106,7 +89,7 @@ def capitalize(sub, new_sentence, language):
     :return: A tuple (capitalized subtitle object, bool new sentence indicator)
     """
 
-    # Punctiation maks that indicate the end of a sentence
+    # Punctuation marks that indicate the end of a sentence
     punctuation = ['.', '!', '?', ':', '(', ')', '[', ']']
     # Colons are most used to show who speaks while brackets may be used for identifying
     # characters or background sounds. Other punctuation may be missing before a new sentence starts.
@@ -134,16 +117,19 @@ def capitalize(sub, new_sentence, language):
     return sub, new_sentence
 
 
-def _clean(file, force_cap, force_tags, progress_msg, msg_args):
+def _clean(file, force_cap, force_tags, progress_msg, msg_args, ignore_parse_errors):
 
     # Init variables
     result = dict()
     result['capitalized'] = False
-    result['removed_tags'] = False
-    result['language_missing'] = False
     result['file_error'] = False
+    result['file_empty'] = False
+    result['language_missing'] = False
+    result['modified'] = False
+    result['removed_tags'] = False
+    result['parse_error'] = False
 
-    encodings = ['utf-8-sig', 'cp1252', 'utf-16-sig']
+    encodings = ['utf-8-sig', 'utf-16', 'cp1252', 'ISO-8859-1']
     subs = ""
 
     # Try the most common file encoding to open the file
@@ -162,33 +148,48 @@ def _clean(file, force_cap, force_tags, progress_msg, msg_args):
     # Try to parse the subtitle file, if it fails parse with ignore_errors flags and mark the file as modified
     try:
         subs = list(srt.parse(subs))
-        result['modified'] = False
     except srt.SRTParseError:
-        subs = list(srt.parse(subs, ignore_errors=True))
-        result['modified'] = True
+        if ignore_parse_errors:
+            subs = list(srt.parse(subs, ignore_errors=True))
+            result['modified'] = True
+        else:
+            result['parse_error'] = enc
+            return result
 
     # Initial quick clean only checks the first and last two subs for forbidden strings
     start_index = 0
     end_index = len(subs)
-    if _is_dirty(subs[1].content):
-        start_index = 2
-    elif _is_dirty(subs[0].content):
-        start_index = 1
+    if end_index < 4:
+        result['file_empty'] = True
+    else:
+        if _is_dirty(subs[1].content):
+            start_index = 2
+        elif _is_dirty(subs[0].content):
+            start_index = 1
 
-    if _is_dirty(subs[-2].content):
-        end_index = -2
-    elif _is_dirty(subs[-1].content):
-        end_index = -1
+        if _is_dirty(subs[-2].content):
+            end_index = -2
+        elif _is_dirty(subs[-1].content):
+            end_index = -1
 
     if start_index != 0 or end_index != len(subs):
         subs = subs[start_index:end_index]
+        result['modified'] = True
+
+    # Check the first 40 subs with a more limited range of strings, as sometimes ads are inserted there too...
+    dirty_subs = []
+    for i in range(min(40, len(subs))):
+        if _is_dirty(subs[i].content, late=True):
+            dirty_subs += [i]
+    if dirty_subs:
+        subs = [sub for i, sub in enumerate(subs) if i not in dirty_subs]
         result['modified'] = True
 
     # Check the first subs to see if they are all-caps or all contain font tags,
     # Sometimes, only a portion of subs are affected so check many
     all_caps = 0
     unwanted_tags = 0
-    for i in range(30):
+    for i in range(min(30, len(subs))):
         if _is_all_caps(subs[i].content):
             all_caps += 1
         if not unwanted_tags and _has_unwanted_tags(subs[i].content):
@@ -220,6 +221,22 @@ def _clean(file, force_cap, force_tags, progress_msg, msg_args):
     return result
 
 
+def _get_dirty_strings(late):
+    """ Returns a list of dirty strings to compare against subs content """
+    if not _get_dirty_strings.dirty_strings:
+        for lang, subdict in dirty_strings.items():
+            for type, dirtlist in subdict.items():
+                _get_dirty_strings.dirty_strings += dirtlist
+                if type == 'late':
+                    _get_dirty_strings.dirty_strings_late += dirtlist
+    if late:
+        return _get_dirty_strings.dirty_strings_late
+    else:
+        return _get_dirty_strings.dirty_strings
+_get_dirty_strings.dirty_strings = []
+_get_dirty_strings.dirty_strings_late = []
+
+
 def _has_unwanted_tags(content):
     """ Checks if a subtitle has unwanted formatting tags """
     return re.match(r'</?font.*?>', content) or re.match(r'</?b>', content)
@@ -240,9 +257,10 @@ def _is_alpha_like(text):
     return all(char.isalpha() or char == "'" for char in text) and len(text) > 1
 
 
-def _is_dirty(content):
+def _is_dirty(content, late=False):
     """ Checks that none of the disallowed "dirty" strings are found in a subtitle
     :param content: Content of a subtitle
+    :param late: Only use the more limited 'late' set of dirty strings
     :return: True if a dirty string was found in the content
     """
 
@@ -250,7 +268,7 @@ def _is_dirty(content):
     content = re.sub(r'<.*?>', '', content).lower()
 
     # Check if the content is dirty
-    for dirt in dirty_strings:
+    for dirt in _get_dirty_strings(late=late):
         if dirt in content:
             return True
     return False
@@ -287,5 +305,8 @@ if __name__ == '__main__':
     parser.add_argument('-l', '--languages', type=str, nargs='+', help='language codes of the models')
     parser.add_argument('-fc', '--force_cap', action='store_true', help='Forces capitalizing the text (very slow)')
     parser.add_argument('-ft', '--force_tag', action='store_true', help='Forces tag removal (slow)')
+    parser.add_argument('-i', '--ignore_parse_errors', action='store_true',
+                        help='Ignore parsing errors when reading the srt file. Note that this can delete data from '
+                             'your file if, for example, the wrong file encoding was used.')
     args = parser.parse_args()
     sys.exit(clean_subs(**vars(args)))
