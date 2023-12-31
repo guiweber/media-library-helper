@@ -291,9 +291,9 @@ def match_vid(sub_root, vid_root, file_base):
                         if lookup:
                             lookup = '{}[.-_]?{}'.format(lookup.group(1), lookup.group(2))
                             for v in vids:
-                                res = re.search(lookup, v)
-                                if res:
-                                    match = res.group()
+                                if re.search(lookup, v):
+                                    match = v
+                                    break
 
     return match
 
