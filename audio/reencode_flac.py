@@ -148,10 +148,13 @@ def _needs_reencoding(file: str, flac_version: version.Version) -> bool:
         return False
 
     if len(vendor_string) >= 3 and vendor_string[0] == "reference" and vendor_string[1] == "libFLAC":
-        if version.parse(vendor_string[2]) < flac_version:
+        try:
+            if version.parse(vendor_string[2]) < flac_version:
+                return True
+            else:
+                return False
+        except version.InvalidVersion:
             return True
-        else:
-            return False
     else:
         return True
 
