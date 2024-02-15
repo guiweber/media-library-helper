@@ -19,10 +19,12 @@ if __name__ == "__main__" and __package__ is None:
 from shared.utils import print_progress
 
 
-def reencode_flac(lib_path: str, force: bool = False, n_procs: int = 4, verbose: bool = False) -> int:
+def reencode_flac(lib_path: str, min_version: str = None, force: bool = False, n_procs: int = 4, verbose: bool = False) -> int:
     """ Reencodes flac files recursively from the specified directory, overwriting the old files
     :param lib_path: Base directory from which files will reencoded recursively
-    :param force: If False (default), files encoded with the reference flac encoder of equal or higher version will be skipped
+    :param min_version: Files encoded with a version of FLAC below min_version will be reencoded.
+                        If not provided, the version of FLAC present on the system is used.
+    :param force: If True, reencodes all files no matter what FLAC version they were previously encoded with.
     :param n_procs: Number of encoding tasks to run concurrently
     :param verbose: If True, additional subprocess output is displayed
     :return: 0 if the process ran successfully
@@ -47,6 +49,22 @@ def reencode_flac(lib_path: str, force: bool = False, n_procs: int = 4, verbose:
     print("Flac version " + flac_version + " found")
     flac_version = version.parse(flac_version)
 
+    # If a minimum version is provided verify it, otherwise use the version of FLAC on the system
+    if min_version is None:
+        min_version = flac_version
+    else:
+        try:
+            min_version = version.parse(min_version)
+        except version.InvalidVersion:
+            print("Error - Could not parse the minimum flac version from the provided string: " + min_version)
+            return 1
+
+        if min_version > flac_version:
+            print("Error - Flac executable version ({}) should be higher or equal to min_version ({}).".format(str(flac_version), str(min_version)))
+            return 1
+        elif not force:
+            print("Minimum version set to {}.".format(min_version))
+
     # Extracts the FLAC files from the file system and output number of files and total size
     flac_files = []
     dir_count = 1  # Start at 1 for the base directory
@@ -58,7 +76,7 @@ def reencode_flac(lib_path: str, force: bool = False, n_procs: int = 4, verbose:
 
     # Select the flac files that need to be reencoded
     if not force:
-        flac_files = [file for file in flac_files if _needs_reencoding(file, flac_version)]
+        flac_files = [file for file in flac_files if _needs_reencoding(file, min_version)]
         print(len(flac_files), " FLAC files need reencoding. (Use the -f force flag to reencode all files)")
 
     file_size = int(sum(os.path.getsize(file) for file in flac_files)/(1000**2))
@@ -170,10 +188,11 @@ def _wait_for_processes(processes, errors):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Reencodes flac files recursively from the specified directory')
-    parser.add_argument('lib_path', type=str, help='Base directory')  
-    parser.add_argument('-f', '--force', action='store_true', help='Forces reencoding all files even if they have been encoded with a higher or equal flac version')
-    parser.add_argument('-n_procs', type=int, default=4, help='Number of files to encode in parallel')
+    parser = argparse.ArgumentParser(description='Reencodes flac files recursively from the specified directory.')
+    parser.add_argument('lib_path', type=str, help='Base directory.')
+    parser.add_argument('-m', '--min_version', type=str, default=None, help='Files encoded with a version of FLAC below min_version will be reencoded. If not provided, the version of FLAC present on the system is used.')
+    parser.add_argument('-f', '--force', action='store_true', help='Forces reencoding all files no matter what FLAC version they were previously encoded with.')
+    parser.add_argument('-n', '--n_procs', type=int, default=4, help='Number of files to encode in parallel.')
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
     sys.exit(reencode_flac(**vars(args)))
