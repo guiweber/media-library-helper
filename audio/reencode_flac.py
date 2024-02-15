@@ -41,13 +41,15 @@ def reencode_flac(lib_path: str, min_version: str = None, force: bool = False, n
     # Check if flac is in the PATH variable and get the version
     try:
         flac_version = subprocess.check_output("flac -v").decode('utf-8').split()[-1]
+        flac_version = version.parse(flac_version)
+        print("Flac version " + str(flac_version) + " found.")
+    except version.InvalidVersion:
+        print("Error - Could not parse the FLAC executable version from the following version string: " + flac_version)
+        return 1
     except Exception as e:
-        print("Error - Could not find flac executable, make sure it is in your PATH variable")
+        print("Error running FLAC, ensure the official FLAC executable is in your PATH variable and check permissions.")
         print(e)
         return 1
-    
-    print("Flac version " + flac_version + " found")
-    flac_version = version.parse(flac_version)
 
     # If a minimum version is provided verify it, otherwise use the version of FLAC on the system
     if min_version is None:
@@ -108,7 +110,7 @@ def reencode_flac(lib_path: str, min_version: str = None, force: bool = False, n
     print("\nNew size of files is ", new_file_size, " MB")
     print(file_size - new_file_size, " MB saved!")
 
-    print("\n", len(errors), " encoding errors occured")
+    print("\n" + str(len(errors)) + " encoding errors occured")
     for e in errors:
         print("Error: (", e[0], ") ", e[1][-1])
 
