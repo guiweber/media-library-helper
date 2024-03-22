@@ -15,6 +15,7 @@ from shared.utils import print_progress
 
 _scan_count = 0
 
+
 def find_empty_dirs(lib_path: str, ignore_hidden=False, ignore_size=0, remove='prompt'):
     """ Finds empty directories and optionally removes them. A directory is considered empty if it contains no or only
         empty directories, symbolic links and ignored files. The root directory is never removed.
@@ -22,7 +23,7 @@ def find_empty_dirs(lib_path: str, ignore_hidden=False, ignore_size=0, remove='p
 
     :param lib_path: Base directory to search from
     :param ignore_hidden: If True, hidden files will be ignored
-    :param ignore_size: Size in KB below which files will be ignored
+    :param ignore_size: Size in KB below which files will be ignored.
     :param remove: String specifying how to handle removal of empty directories:
                     "yes" removes the empty directories without user interaction
                     "no" only prints the empty directories

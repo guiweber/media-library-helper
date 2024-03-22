@@ -21,11 +21,12 @@ revert to a previous version of Python.
 ## Structure
 The scripts are sorted into folder depending on the type of files they act on
 - __audio__
-  - ```reencode_flac```: Reencodes Flac files in place if they have been encoded with a version older than the one installed on the system
+  - ```reencode_flac```: Reencodes Flac files in place if they have been encoded with older versions of FLAC
 
 
 - __fs__ (file system)
-  - ```find_empty_dirs```: Finds directories that are empty and optionally removes them. Can optionally ignore hidden or small files.
+  - ```FileSet```: Class for quick, reusable, in-memory name-based file search, and folder comparison using set operations.  
+  - ```find_empty_dirs```: Finds directories that are empty and optionally removes them. Can also ignore small or hidden files.
 
 
 - __video__
