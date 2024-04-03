@@ -156,20 +156,25 @@ class FileSet:
         elif isinstance(names, str):
             names = set([names])
 
-        res = []
+        final_res = set()
+        if disp:
+            names = sorted(names)
         for n in names:
+            res = []
             if lower:
                 res += [i for i in self.paths if i.lower().endswith(n.lower())]
             else:
                 res += [i for i in self.paths if i.endswith(n)]
-            if res and disp:
+            if res:
+                final_res.update(res)
+            if disp:
                 print("\n{}:".format(n))
-                [print(i) for i in res]
+                if res:
+                    [print(i) for i in res]
+                else:
+                    print("No results")
 
-        if not res and disp:
-            print("No results.")
-
-        return set(res)
+        return final_res
 
     def intersect_names(self, names):
         """ Returns a FileSet with only the files matching the provided names, irrespective of the folder structure.
