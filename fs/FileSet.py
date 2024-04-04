@@ -133,14 +133,6 @@ class FileSet:
         names = self.names | other.names
         return FileSet(paths, names, self.rootdirs | other.rootdirs, self.rel_paths, self.lower)
 
-    def get_full_paths(self):
-        """ Returns the full paths no matter if the class was built with full or relative paths """
-        if self.rel_paths:
-            root = next(iter(self.rootdirs))
-            return set([os.path.join(root, i) for i in self.paths])
-        else:
-            return self.paths
-
     def find(self, names, disp=True, lower=True):
         """ Finds the paths where one or more files are located
 
@@ -175,6 +167,14 @@ class FileSet:
                     print("No results")
 
         return final_res
+
+    def get_full_paths(self):
+        """ Returns the full paths no matter if the class was built with full or relative paths """
+        if self.rel_paths:
+            root = next(iter(self.rootdirs))
+            return set([os.path.join(root, i) for i in self.paths])
+        else:
+            return self.paths
 
     def intersect_names(self, names):
         """ Returns a FileSet with only the files matching the provided names, irrespective of the folder structure.
