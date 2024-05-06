@@ -162,7 +162,7 @@ class FileSet:
             if disp:
                 print("\n{}:".format(n))
                 if res:
-                    [print(i) for i in res]
+                    [print(i) for i in sorted(res)]
                 else:
                     print("No results")
 
