@@ -13,7 +13,7 @@ def print_progress(msg, *args, show_time=True, init=False, final=False):
     :param init: If true, resets elapsed time
     :param final: If true, throttling is ignored and the message is ended with a new line character
     """
-    if final or time.time() > print_progress.prev_call + 1 or print_progress.prev_call_final:
+    if final or time.time() > print_progress.prev_call + 1 or print_progress.prev_call_final or init:
         end = "\n" if final else "\r"
         msg = time_brackets(init=init) + msg if show_time else msg
         msg = msg.format(*args)
@@ -21,7 +21,11 @@ def print_progress(msg, *args, show_time=True, init=False, final=False):
             print_progress.pad_len = len(msg)
         print(msg.ljust(print_progress.pad_len), end=end, flush=True)
         print_progress.prev_call = time.time()
-        print_progress.prev_call_final = True if final else False
+        if final:
+            print_progress.prev_call_final = True
+            print_progress.pad_len = 0
+        else:
+            print_progress.prev_call_final = False
 print_progress.prev_call_final = False
 print_progress.prev_call = 0
 print_progress.pad_len = 0
