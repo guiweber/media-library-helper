@@ -10,6 +10,8 @@ dirty_strings = dict()
 # English
 dirty_strings["en"] = dict()
 dirty_strings["en"]["early"] = [
+    "captioning sponsored",
+    "captioned by",
     "clearway law",
     "downloaded from",
     "encoded by",
