@@ -58,3 +58,13 @@ dirty_strings["fr"]["late"] = [
     "sous-titrage",
     "vostfr"
 ]
+
+# Swedish
+dirty_strings["sv"] = dict()
+dirty_strings["sv"]["early"] = [
+    "översättning"
+]
+
+dirty_strings["sv"]["late"] = []
+
+
