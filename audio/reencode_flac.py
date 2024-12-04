@@ -40,7 +40,7 @@ def reencode_flac(lib_path: str, min_version: str = None, force: bool = False, n
 
     # Check if flac is in the PATH variable and get the version
     try:
-        flac_version = subprocess.check_output("flac -v").decode('utf-8').split()[-1]
+        flac_version = subprocess.check_output("flac -v", shell=True).decode('utf-8').split()[-1]
         flac_version = version.parse(flac_version)
         print("Flac version " + str(flac_version) + " found.")
     except version.InvalidVersion:
