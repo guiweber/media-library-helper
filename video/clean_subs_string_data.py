@@ -1,6 +1,6 @@
 """ Contains unwanted strings used by clean_subs.py.
     Each entry of the dictionary is a dictionary with two parts, 'early' and 'late'.
-    'early' entries are only added to the 'late' entries at the very begining and end of a sub file.
+    'early' entries are only added to the 'late' entries at the very beginning and end of a sub file.
     'late' entries are checked in for a larger number of subs, but should be more restrictive to avoid detecting
      wanted subtitles as unwanted. """
 
@@ -18,6 +18,7 @@ dirty_strings["en"]["early"] = [
     "encoded vid",
     "english - us",
     "movies site",
+    " release",
     "ripped by",
     " sdh",
     "subtitle",
