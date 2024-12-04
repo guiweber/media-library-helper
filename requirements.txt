@@ -1,6 +1,8 @@
-python-ffmpeg >= 2.0.9
+langcodes >= 3.5.0
+language-data >= 1.3
 packaging >= 23.2
+pillow >= 10.3.0
+pgsrip >= 0.1.11
+python-ffmpeg >= 2.0.12
+spacy >= 3.8.2
 srt >= 3.5.3
-langcodes >= 3.3.0
-language-data >= 1.1
-spacy >= 3.7.2
