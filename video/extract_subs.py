@@ -6,7 +6,7 @@ import os
 import sys
 import langcodes
 
-from ffmpeg import FFmpeg
+from ffmpeg import FFmpeg, Progress
 
 # Allow relative import from shared folder as per PEP 366
 if __name__ == "__main__" and __package__ is None:
@@ -89,7 +89,7 @@ def extract_subs(lib_path: str, languages: list, sub_format='srt', force: bool =
                 to_review +=[output_file]
 
         @ffmpeg.on("progress")
-        def on_progress():
+        def on_progress(progress: Progress):
             on_progress.count += 1
             if not on_progress.count % 5:
                 print_progress(msg, file_name)
