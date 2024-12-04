@@ -58,3 +58,8 @@ Add the path to media-library-helper to a `PYTHONPATH` environment variable in W
 ```bash
 python -m audio.reencode_flac arguments
 ```
+
+## Running in IDE
+Add the following environment variable to see output in real time
+
+    PYTHONUNBUFFERED=1
