@@ -13,7 +13,7 @@ For ripping image-based subtitles with `pgsrip` (optional):
 - mkvtoolnix-gui
 - tesseract
 - `tesseract-data` for the languages you want to use
-Note that pgsrip is currently not implemented but can be run directly in the venv terminal: `pgsrip -l en -l fr ~/medias/`
+Note that pgsrip is currently not implemented but can be run directly in the venv terminal: `pgsrip -all -f -l en -l fr ~/medias/`
 
 Some scripts use spacy for natural language processing and models need to be downloaded separately for each language
 https://spacy.io/models
