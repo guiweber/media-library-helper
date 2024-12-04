@@ -57,7 +57,8 @@ def extract_subs(lib_path: str, languages: list, sub_format='srt', force: bool =
     dir_count = 1  # Start at 1 for the base directory
     vid_count = 0
     ffprobe_errors = []
-    for root, dirs, files in os.walk(lib_path):
+    for root, dirs, files in os.walk(lib_path, topdown=True):
+        dirs[:] = [d for d in dirs if not d.endswith(".trickplay")]
         print_progress(msg, vid_count)
         for file in files:
             if _is_supported(file):

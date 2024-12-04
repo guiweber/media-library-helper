@@ -51,7 +51,8 @@ def clean_subs(lib_path: str, spacy_models, spacy_models_languages, force_cap=Fa
     sub_count = 0
     change_count = 0
     errors = []
-    for root, dirs, files in os.walk(lib_path):
+    for root, dirs, files in os.walk(lib_path, topdown=True):
+        dirs[:] = [d for d in dirs if not d.endswith(".trickplay")]
         print_progress(msg, sub_count, change_count)
         for file in files:
             file_ext = os.path.splitext(file)[1][1:].lower()
