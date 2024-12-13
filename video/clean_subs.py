@@ -21,7 +21,7 @@ supported_sub_formats = ["srt"]
 _spacy_models = dict()
 
 
-def clean_subs(lib_path: str, spacy_models, spacy_models_languages, force_cap=False, force_tags=False, ignore_parse_errors=False):
+def clean_subs(lib_path: str, spacy_models, spacy_models_languages, force_cap=False, force_tags=False, ignore_parse_errors=False, keep_dirty=True):
     """ Clean common unwanted strings from subtitles recursively from the specified directory.
         For full functionality, subtitles files need to be named following the jellyfin external file tagging standard
         (https://jellyfin.org/docs/general/server/media/external-files/), with a 2 or 3 letter language code
@@ -33,6 +33,8 @@ def clean_subs(lib_path: str, spacy_models, spacy_models_languages, force_cap=Fa
         :param ignore_parse_errors: If True, srt parse errors will be ignored.
                                     Note that this can delete data from your file if,
                                     for example, the wrong file encoding was used.
+        :param keep_dirty: If True, dirty subs will be kept in addition to the cleaned subs, but their extension
+                           will be changed to .dirty
         :return: 0 if the process ran successfully
         """
 
@@ -49,19 +51,19 @@ def clean_subs(lib_path: str, spacy_models, spacy_models_languages, force_cap=Fa
     # Find subtitles and clean them
     msg = "Scanned {} subtitles files of which {} have been modified"
     sub_count = 0
-    change_count = 0
+    changed = []
     errors = []
     for root, dirs, files in os.walk(lib_path, topdown=True):
         dirs[:] = [d for d in dirs if not d.endswith(".trickplay")]
-        print_progress(msg, sub_count, change_count)
+        print_progress(msg, sub_count, len(changed))
         for file in files:
             file_ext = os.path.splitext(file)[1][1:].lower()
             if file_ext in supported_sub_formats:
                 sub_count += 1
                 filepath = os.path.join(root, file)
-                res = _clean(filepath, force_cap, force_tags, msg, [sub_count, change_count], ignore_parse_errors)
+                res = _clean(file, filepath, force_cap, force_tags, msg, [sub_count, len(changed)], ignore_parse_errors, keep_dirty)
                 if res["modified"]:
-                    change_count += 1
+                    changed += [filepath]
                 if res["language_missing"]:
                     errors += ["Could not capitalize file due to missing language model or undetermined file language: "
                                + filepath]
@@ -73,11 +75,16 @@ def clean_subs(lib_path: str, spacy_models, spacy_models_languages, force_cap=Fa
                     errors += ["Parse error in file while using encoding {}. "
                                "Try converting file to UTF-8 before ignoring parse errors. :".format(res['parse_error']) + filepath]
 
-    print_progress(msg, sub_count, change_count, final=True)
+    print_progress(msg, sub_count, len(changed), final=True)
     print("All subtitles cleaned!")
     print()
     print("{} errors occurred:".format(len(errors)))
     [print(e) for e in errors]
+    print("{} files cleaned:".format(len(changed)))
+    [print(c) for c in changed]
+
+    if keep_dirty and changed:
+        print("Original dirty subs have been kept for review. Their extension have been changed to '.dirty'")
 
     return 0
 
@@ -118,7 +125,7 @@ def capitalize(sub, new_sentence, language):
     return sub, new_sentence
 
 
-def _clean(file, force_cap, force_tags, progress_msg, msg_args, ignore_parse_errors):
+def _clean(file, filepath, force_cap, force_tags, progress_msg, msg_args, ignore_parse_errors, keep_dirty):
 
     # Init variables
     result = dict()
@@ -136,7 +143,7 @@ def _clean(file, force_cap, force_tags, progress_msg, msg_args, ignore_parse_err
     # Try the most common file encoding to open the file
     for enc in encodings:
         try:
-            with open(file, "r", encoding=enc) as f:
+            with open(filepath, "r", encoding=enc) as f:
                 subs = f.read()
             break
         except Exception:
@@ -160,17 +167,21 @@ def _clean(file, force_cap, force_tags, progress_msg, msg_args, ignore_parse_err
     # Initial quick clean only checks the first and last two subs for forbidden strings
     start_index = 0
     end_index = len(subs)
-    if end_index < 4:
+    if end_index == 0:
         result['file_empty'] = True
     else:
-        if _is_dirty(subs[1].content):
+        if end_index > 3 and _is_dirty(subs[2].content):
+            start_index = 3
+        elif end_index > 2 and _is_dirty(subs[1].content):
             start_index = 2
-        elif _is_dirty(subs[0].content):
+        elif end_index > 1 and _is_dirty(subs[0].content):
             start_index = 1
 
-        if _is_dirty(subs[-2].content):
+        if end_index > 5 and _is_dirty(subs[-3].content):
+            end_index = -3
+        elif end_index > 4 and _is_dirty(subs[-2].content):
             end_index = -2
-        elif _is_dirty(subs[-1].content):
+        elif end_index > 3 and _is_dirty(subs[-1].content):
             end_index = -1
 
     if start_index != 0 or end_index != len(subs):
@@ -197,13 +208,13 @@ def _clean(file, force_cap, force_tags, progress_msg, msg_args, ignore_parse_err
             unwanted_tags += 1
 
     if all_caps > 10 or force_cap:
-        long_process = " - Current file needs deep cleaning {}/{}"
+        long_process = " - {} needs deep cleaning {}/{}"
         new_sentence = True
         tags = get_sub_tags_from_file_name(file)
         if tags and _load_spacy_model(tags[0]):
             total = len(subs)
             for i, sub in enumerate(subs):
-                print_progress(progress_msg + long_process.ljust(45), *msg_args, i, total)
+                print_progress(progress_msg + long_process.ljust(45), *msg_args, file, i, total)
                 subs[i], new_sentence = capitalize(sub, new_sentence, tags[0])
             result['modified'] = True
             result['capitalized'] = True
@@ -216,7 +227,9 @@ def _clean(file, force_cap, force_tags, progress_msg, msg_args, ignore_parse_err
 
     # Write the new subtitle file
     if result['modified']:
-        with open(file, "w", encoding='utf-8-sig') as f:
+        if keep_dirty:
+            os.replace(filepath, filepath + ".dirty")
+        with open(filepath, "w", encoding='utf-8-sig') as f:
             f.write(srt.compose(subs, reindex=True))
 
     return result
@@ -225,6 +238,7 @@ def _clean(file, force_cap, force_tags, progress_msg, msg_args, ignore_parse_err
 def _get_dirty_strings(late):
     """ Returns a list of dirty strings to compare against subs content """
     if not _get_dirty_strings.dirty_strings:
+        global dirty_strings
         for lang, subdict in dirty_strings.items():
             for type, dirtlist in subdict.items():
                 _get_dirty_strings.dirty_strings += dirtlist
@@ -270,7 +284,13 @@ def _is_dirty(content, late=False):
 
     # Check if the content is dirty
     for dirt in _get_dirty_strings(late=late):
-        if dirt in content:
+        if type(dirt) == tuple:
+            if (dirt[0] == 'surround'
+                    and len(content) > 2*len(dirt[0])
+                    and content.startswith(dirt[0])
+                    and content.endswith(dirt[0])):
+                return True
+        elif dirt in content:
             return True
     return False
 

@@ -2,7 +2,13 @@
     Each entry of the dictionary is a dictionary with two parts, 'early' and 'late'.
     'early' entries are only added to the 'late' entries at the very beginning and end of a sub file.
     'late' entries are checked in for a larger number of subs, but should be more restrictive to avoid detecting
-     wanted subtitles as unwanted. """
+     wanted subtitles as unwanted.
+
+     Each entry can be a string or a tuple containing a modifier and a string.
+
+     Modifiers are:
+     - surround: Only makes dirty if the sub starts and ends with the string
+     """
 
 
 dirty_strings = dict()
@@ -30,10 +36,10 @@ dirty_strings["en"]["early"] = [
     ".org",
     ".net",
     "@",
-    "-=",
     "==",
-    "--",
-    "**"
+    "-=",
+    ('surround', "--"),
+    ('surround', "**")
 ]
 
 dirty_strings["en"]["late"] = [
