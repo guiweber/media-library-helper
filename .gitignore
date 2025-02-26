@@ -1,6 +1,9 @@
 # special files
 run.py
 
+# local package files
+pgsrip
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
