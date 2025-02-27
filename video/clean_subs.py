@@ -14,7 +14,7 @@ if __name__ == "__main__" and __package__ is None:
     __package__ = "media-library-helper"
 
 from shared.utils import print_progress
-from shared.vid_utils import get_sub_tags_from_file_name
+from shared.vid_utils import get_sub_tags_from_file_name, read_srt_file
 from video.clean_subs_string_data import dirty_strings
 
 supported_sub_formats = ["srt"]
@@ -127,62 +127,27 @@ def capitalize(sub, new_sentence, language):
 
 def _clean(file, filepath, force_cap, force_tags, progress_msg, msg_args, ignore_parse_errors, keep_dirty):
 
-    # Init variables
-    result = dict()
-    result['capitalized'] = False
-    result['file_error'] = False
-    result['file_empty'] = False
-    result['language_missing'] = False
-    result['modified'] = False
-    result['removed_tags'] = False
-    result['parse_error'] = False
-
-    encodings = ['utf-8-sig', 'utf-16', 'cp1252', 'ISO-8859-1']
-    subs = ""
-
-    # Try the most common file encoding to open the file
-    for enc in encodings:
-        try:
-            with open(filepath, "r", encoding=enc) as f:
-                subs = f.read()
-            break
-        except Exception:
-            pass
-
+    subs, result = read_srt_file(filepath, ignore_parse_errors)
     if not subs:
-        result['file_error'] = True
         return result
-
-    # Try to parse the subtitle file, if it fails parse with ignore_errors flags and mark the file as modified
-    try:
-        subs = list(srt.parse(subs))
-    except srt.SRTParseError:
-        if ignore_parse_errors:
-            subs = list(srt.parse(subs, ignore_errors=True))
-            result['modified'] = True
-        else:
-            result['parse_error'] = enc
-            return result
 
     # Initial quick clean only checks the first and last two subs for forbidden strings
     start_index = 0
     end_index = len(subs)
-    if end_index == 0:
-        result['file_empty'] = True
-    else:
-        if end_index > 3 and _is_dirty(subs[2].content):
-            start_index = 3
-        elif end_index > 2 and _is_dirty(subs[1].content):
-            start_index = 2
-        elif end_index > 1 and _is_dirty(subs[0].content):
-            start_index = 1
 
-        if end_index > 5 and _is_dirty(subs[-3].content):
-            end_index = -3
-        elif end_index > 4 and _is_dirty(subs[-2].content):
-            end_index = -2
-        elif end_index > 3 and _is_dirty(subs[-1].content):
-            end_index = -1
+    if end_index > 3 and _is_dirty(subs[2].content):
+        start_index = 3
+    elif end_index > 2 and _is_dirty(subs[1].content):
+        start_index = 2
+    elif end_index > 1 and _is_dirty(subs[0].content):
+        start_index = 1
+
+    if end_index > 5 and _is_dirty(subs[-3].content):
+        end_index = -3
+    elif end_index > 4 and _is_dirty(subs[-2].content):
+        end_index = -2
+    elif end_index > 3 and _is_dirty(subs[-1].content):
+        end_index = -1
 
     if start_index != 0 or end_index != len(subs):
         subs = subs[start_index:end_index]

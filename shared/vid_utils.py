@@ -3,6 +3,7 @@
 import langcodes
 import os
 import re
+import srt
 
 
 def get_vids_extra_tags():
@@ -78,3 +79,47 @@ def get_supported_video_extensions():
             "mov", "movie", "qt",
             "avi", "divx", "wmv",
             "ogv", "ogg", "vob"]
+
+def read_srt_file(filepath, ignore_parse_errors):
+    """ Reads a subtitle file and returns the partsed subs and initialized result dictionary """
+
+    result = dict()
+    result['capitalized'] = False
+    result['file_error'] = False
+    result['file_empty'] = False
+    result['language_missing'] = False
+    result['modified'] = False
+    result['parse_error'] = False
+    result['removed_tags'] = False
+
+    encodings = ['utf-8-sig', 'utf-16', 'cp1252', 'ISO-8859-1']
+    subs = []
+
+    # Try the most common file encoding to open the file
+    for enc in encodings:
+        try:
+            with open(filepath, "r", encoding=enc) as f:
+                subs = f.read()
+            break
+        except Exception:
+            pass
+
+    if not subs:
+        result['file_error'] = True
+        return subs, result
+
+    # Try to parse the subtitle file, if it fails parse with ignore_errors flags and mark the file as modified
+    try:
+        subs = list(srt.parse(subs))
+    except srt.SRTParseError:
+        if ignore_parse_errors:
+            subs = list(srt.parse(subs, ignore_errors=True))
+            result['modified'] = True
+        else:
+            result['parse_error'] = enc
+            return subs, result
+
+    if len(subs) == 0:
+        result['file_empty'] = True
+
+    return subs, result
