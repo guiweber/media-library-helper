@@ -1,4 +1,4 @@
-"""
+r"""
 Class for quick, reusable, in-memory name-based file search and folder comparison.
 
 Allows performing set operations (union, difference, intersection) on file paths, which can be done
