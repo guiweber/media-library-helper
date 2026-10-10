@@ -13,7 +13,6 @@ For ripping image-based subtitles with `pgsrip` (optional):
 - mkvtoolnix-gui
 - tesseract
 - `tesseract-data` for the languages you want to use
-Note that pgsrip is currently not implemented but can be run directly in the venv terminal: `pgsrip -all -f -l en -l fr ~/medias/`
 
 Some scripts use spacy for natural language processing and models need to be downloaded separately for each language
 https://spacy.io/models
@@ -40,6 +39,7 @@ The scripts are sorted into folder depending on the type of files they act on
 - __video__
   - `clean_subs`: Removes common advertisement strings as well as formatting tags from subtitle files. Also attempts to detect ALL-CAPS subtitles and to apply grammatically correct capitalization.
   - `extract_subs`: Extracts text based subtitles from video files and saves them as .srt.
+  - `extract_subs_pgs`: Extracts PGS based subtitles from video files and saves them as .srt. Requires installing external dependencies - see Requirements section.
   - `match_subs`: Renames and relocate subtitles to match their associated video file and comply with tagging standards. Also finds dangling subtitle files. 
 
 
