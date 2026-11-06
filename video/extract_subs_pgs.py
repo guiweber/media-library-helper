@@ -79,9 +79,9 @@ def _clean(filepath, ignore_parse_errors):
             sub.content = re.sub(r'[JIT&7]»', r'♪', sub.content, flags=re.MULTILINE)
             sub.content = re.sub(r'^[JIT»&7iy]{2,3}$', r'♪♪', sub.content, flags=re.MULTILINE)
             sub.content = re.sub(r'^[»>]$', r'♪♪', sub.content, flags=re.MULTILINE)
-            sub.content = re.sub(r'^(-\s)?[JIT»&7](\s.*\s)[JIT»&7]$', r'\1♪\2♪', sub.content, flags=re.MULTILINE)
+            sub.content = re.sub(r'^(-\s)?[JT»&7](\s.*\s)[JT»&7]$', r'\1♪\2♪', sub.content, flags=re.MULTILINE)
             sub.content = re.sub(r'^(-\s)?[JT»&](\s.*)$', r'\1♪\2', sub.content, flags=re.MULTILINE)
-            sub.content = re.sub(r'^(.*\s)[JIT»&]$', r'\1♪', sub.content, flags=re.MULTILINE)
+            sub.content = re.sub(r'^(.*\s)[JT»&]$', r'\1♪', sub.content, flags=re.MULTILINE)
 
             # Musical note character replacements - specific expressions
             expressions = r'&\'|Ji'
