@@ -9,7 +9,7 @@ In addition to the modules in _requirements.txt_, these should be installed and 
 - ffmpeg
 - flac
 
-For ripping image-based subtitles with `pgsrip` (optional):
+For ripping image-based subtitles with `pgsrip` and manipulating mkv files (optional):
 - mkvtoolnix-gui
 - tesseract
 - `tesseract-data` for the languages you want to use
@@ -41,6 +41,7 @@ The scripts are sorted into folder depending on the type of files they act on
   - `extract_subs`: Extracts text based subtitles from video files and saves them as .srt.
   - `extract_subs_pgs`: Extracts PGS based subtitles from video files and saves them as .srt. Requires installing external dependencies - see Requirements section.
   - `match_subs`: Renames and relocate subtitles to match their associated video file and comply with tagging standards. Also finds dangling subtitle files. 
+  - `remux_mkv` : Remuxes a single mkv file or all mkv files within a folder, optionally recursively.
 
 
 - __shared__: functions meant to be used by other scripts and not by the end user
