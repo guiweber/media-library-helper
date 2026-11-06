@@ -49,7 +49,7 @@ The scripts are sorted into folder depending on the type of files they act on
 The modules can be imported as follows:
 
 ```python
-from video.extract_subs import extract_subs
+from video.extract_subs_textbased import extract_subs
 ```
 
 ## To run from CLI under windows

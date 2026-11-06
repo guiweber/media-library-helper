@@ -27,7 +27,7 @@ def extract_subs(lib_path: str, languages: list, sub_format='srt', force: bool =
                  force_undefined: bool = False) -> int:
     """ Extracts subtitles from video files recursively starting from the specified directory
     :param lib_path: Base directory from which subtitles will be extracted recursively
-    :param languages: list of iso language codes representing languages that should be extracted
+    :param languages: list of two-letter language codes (ISO 639-1) that should be extracted
     :param sub_format: file extension format of the extracted sub file
     :param force: If True, will overwrite existing subtitle files
     :param force_extras: If True, subtitles of the same language without differentiating tags are extracted as "extra"
@@ -124,7 +124,7 @@ def extract_subs(lib_path: str, languages: list, sub_format='srt', force: bool =
 def _get_extractable_subs(file: str, languages: list, sub_format: str, force: bool, force_extras: bool, force_undefined: bool) -> list:
     """ Check for subtitles matching the desired languages in the video file and if they have already been extracted
     :param file: Path to the video file
-    :param languages: list of iso language codes that should be extracted
+    :param languages: list of two-letter language codes (ISO 639-1) that should be extracted
     :param sub_format: file extension format for the extracted sub file
     :param force: If True, will overwrite existing subtitle files
     :param force_extras: If True, subtitles of the same language without differentiating tags are extracted as "extra"
